@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  ota:
+    build: ./ota_server
+    command: bash -c "gunicorn --bind $${BIND_INTERFACE}:$${CONTAINER_PORT} --graceful-timeout $${GRACEFUL_TIMEOUT} --timeout $${TIMEOUT} --worker-connections $${WORKER_CONNECTIONS} --workers $${WORKERS} wsgi-service:app"
+    volumes:
+      - ./ota_server/:/usr/src/app/
+      - ./bin/:/usr/src/bin/
+    ports:
+      - 5000:5000
+    environment:
+      - BIND_INTERFACE=${BIND_INTERFACE:-0.0.0.0}
+      - CONTAINER_PORT=${CONTAINER_PORT:-5000}
+      - GRACEFUL_TIMEOUT=${GRACEFUL_TIMEOUT:-300}
+      - TIMEOUT=${TIMEOUT:-300}
+      - WORKER_CONNECTIONS=${WORKER_CONNECTIONS:-5}
+      - WORKERS=${WORKERS:-3}
+      - FIRMWARE_PATH=/usr/src/bin
