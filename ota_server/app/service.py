@@ -122,6 +122,30 @@ def create_app(test_config=None):
         else:
             return "Not modified", 304
 
+    @app.route("/latest_firmware", methods=['GET', 'OPTIONS'])
+    def latest_firmware():
+        if request.method == "OPTIONS": # CORS preflight
+            response = make_response()
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add('Access-Control-Allow-Headers', "*")
+            response.headers.add('Access-Control-Allow-Methods', "*")
+            return response
+
+        # Get latest version
+        latest_firmware = FirmwareVersion.get_latest()
+
+        response = make_response(
+            send_file(
+                latest_firmware.path,
+                as_attachment=True,
+                download_name=str(latest_firmware),
+                mimetype="application/octet-stream",
+            )
+        )
+        response.headers.add("Content-Length", latest_firmware.size)
+        response.headers.add("Access-Control-Allow-Origin","*")
+        return response
+
     return app
 
 
