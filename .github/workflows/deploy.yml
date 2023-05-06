@@ -1,0 +1,17 @@
+name: Deploy to server
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Build docker image
+        run: docker build . --file ota_server/Dockerfile --tag linka-ota-server:$(date +%s)
