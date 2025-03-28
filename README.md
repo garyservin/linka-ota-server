@@ -1,9 +1,9 @@
-linka-ota-server
+# linka-ota-server
 
 Remote OTA Server for [Linka sensors](https://github.com/melizeche/AireLibre/) using [linka-firmware](https://github.com/garyservin/linka-firmware)
 
-# Development instructions
-## Using python vevn directly
+## Development instructions
+### Using python vevn directly
 Install
 ```
 $ sudo apt install python3-devel
@@ -18,14 +18,14 @@ $ source ./venv/bin/activate
 $ gunicorn --bind 0.0.0.0:5000 wsgi:app
 ```
 
-## Using docker and docker-compose
+### Using docker and docker-compose
 1. Start the services
 ```
 docker compose -f docker-compose.yaml up -d --build
 ```
 
-# Firmware directory storage
-## Directory hierarchy
+## Firmware directory storage
+### Directory hierarchy
 Your directory should look like this
 ```
 bin
@@ -35,7 +35,7 @@ bin
 ├── linka-firmware-v0.0.3.bin
 └── ...
 ```
-## versions file format
+### versions file format
 The `versions` file is a json file containing each firmware version with the following format
 ```
 {
