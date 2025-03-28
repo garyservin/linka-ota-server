@@ -21,7 +21,7 @@ $ gunicorn --bind 0.0.0.0:5000 wsgi:app
 ## Using docker and docker-compose
 1. Start the services
 ```
-docker-compose -f docker-compose.yaml up -d --build
+docker compose -f docker-compose.yaml up -d --build
 ```
 
 # Firmware directory storage
