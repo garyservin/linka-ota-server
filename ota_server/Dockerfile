@@ -11,8 +11,8 @@ ENV PYTHONUNBUFFERED=1
 
 # install dependencies
 RUN pip install --upgrade pip
-COPY ota_server/requirements.txt /usr/src/app/requirements.txt
+COPY requirements.txt /usr/src/app/requirements.txt
 RUN pip install -r /usr/src/app/requirements.txt
 
 # copy project
-COPY ota_server/app /usr/src/app
+COPY app /usr/src/app
