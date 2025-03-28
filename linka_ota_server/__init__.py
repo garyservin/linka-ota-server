@@ -64,27 +64,23 @@ def create_app(test_config=None):
         latest_firmware = FirmwareVersion.get_latest()
 
         # If client has the same version as the latest one, skip
-        if latest_firmware.version == headers["x-ESP8266-version"]:
+        if (
+            latest_firmware.version == headers["x-ESP8266-version"]
+            and headers["x-ESP8266-sketch-md5"] == latest_firmware.md5sum
+        ):
             return "Not modified", 304
 
-        if (
-            latest_firmware.version != headers["x-ESP8266-version"]
-            or headers["x-ESP8266-sketch-md5"] != latest_firmware.md5sum
-        ):
-
-            response = make_response(
-                send_file(
-                    latest_firmware.path,
-                    as_attachment=True,
-                    download_name=str(latest_firmware),
-                    mimetype="application/octet-stream",
-                )
+        response = make_response(
+            send_file(
+                latest_firmware.path,
+                as_attachment=True,
+                download_name=str(latest_firmware),
+                mimetype="application/octet-stream",
             )
-            response.headers["Content-Length"] = latest_firmware.size
-            response.headers["x-MD5"] = latest_firmware.md5sum
-            return response
-
-        return "Not modified", 304
+        )
+        response.headers["Content-Length"] = latest_firmware.size
+        response.headers["x-MD5"] = latest_firmware.md5sum
+        return response
 
     @app.route("/latest_firmware", methods=['GET', 'OPTIONS'])
     def latest_firmware():

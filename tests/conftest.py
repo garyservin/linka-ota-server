@@ -12,6 +12,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 
+import json
 import os
 import pytest
 import sys
@@ -21,8 +22,33 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
 from linka_ota_server import create_app
-from linka_ota_server.firmware import create_test_dir
 
+def create_test_dir(path):
+    versions = {
+        "latest": "0.0.2",
+        "0.0.1": {
+            "file": "linka-firmware-v0.0.1.bin",
+            "md5sum": "b185038c6e3a1786e0d2bc13d67d1061"
+        },
+        "0.0.2": {
+            "file": "linka-firmware-v0.0.2.bin",
+            "md5sum": "c7f57af6623c7865ddbb6b564916aafd"
+        },
+    }
+
+    if not os.path.isdir(path):
+        os.mkdir(path)
+        with open(f"{path}/versions", 'w') as f:
+            json.dump(versions, f)
+
+        for version, data in versions.items():
+            if "latest" in version:
+                continue
+            with open(f"{path}/{data['file']}", 'w') as f:
+                f.write(f"v{version}")
+
+    else:
+        return
 
 @pytest.fixture
 def client():

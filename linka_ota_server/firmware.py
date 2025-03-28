@@ -29,13 +29,6 @@ class FirmwareVersion:
         return f"{self.base_name}-v{self.version}.bin"
 
     @property
-    def md5(self):
-        with open(self.path, "rb") as f:
-            file_hash = hashlib.md5()
-            while chunk := f.read(8192):
-                file_hash.update(chunk)
-
-    @property
     def size(self):
         return os.path.getsize(self.path)
 
@@ -48,31 +41,3 @@ class FirmwareVersion:
         latest = versions["latest"]
         version = FirmwareVersion(versions[latest]["file"], versions[latest]["md5sum"])
         return version
-
-
-def create_test_dir(path):
-    versions = {
-        "latest": "0.0.2",
-        "0.0.1": {
-            "file": "linka-firmware-v0.0.1.bin",
-            "md5sum": "b185038c6e3a1786e0d2bc13d67d1061"
-        },
-        "0.0.2": {
-            "file": "linka-firmware-v0.0.2.bin",
-            "md5sum": "c7f57af6623c7865ddbb6b564916aafd"
-        },
-    }
-
-    if not os.path.isdir(path):
-        os.mkdir(path)
-        with open(f"{path}/versions", 'w') as f:
-            json.dump(versions, f)
-
-        for version, data in versions.items():
-            if "latest" in version:
-                continue
-            with open(f"{path}/{data['file']}", 'w') as f:
-                f.write(f"v{version}")
-
-    else:
-        return
