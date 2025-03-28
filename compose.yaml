@@ -1,5 +1,7 @@
+---
 services:
   ota:
+    container_name: linka_ota_server
     build: ./ota_server
     command: bash -c "gunicorn --bind $${BIND_INTERFACE}:$${CONTAINER_PORT} --graceful-timeout $${GRACEFUL_TIMEOUT} --timeout $${TIMEOUT} --worker-connections $${WORKER_CONNECTIONS} --workers $${WORKERS} wsgi-service:app"
     volumes:
