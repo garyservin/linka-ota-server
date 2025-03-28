@@ -1,0 +1,29 @@
+[project]
+name = "linka-ota-server"
+version = "0.1.0"
+description = "Remote OTA Server for Linka Sensors using linka-firmware"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flask",
+    "gunicorn",
+]
+
+[project.scripts]
+hello = "linka_ota_server:create_app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["linka_ota_server"]
+
+[dependency-groups]
+dev = [
+    "coverage>=7.7.1",
+    "lark>=1.2.2",
+    "pylark>=0.0.13",
+    "pytest>=8.3.5",
+    "pyyaml>=6.0.2",
+]

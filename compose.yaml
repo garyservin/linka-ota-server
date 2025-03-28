@@ -1,14 +1,23 @@
 ---
 services:
   ota:
+    # Set the container name
     container_name: linka_ota_server
-    build: ./ota_server
-    command: bash -c "gunicorn --bind $${BIND_INTERFACE}:$${CONTAINER_PORT} --graceful-timeout $${GRACEFUL_TIMEOUT} --timeout $${TIMEOUT} --worker-connections $${WORKER_CONNECTIONS} --workers $${WORKERS} wsgi-service:app"
+
+    # Build the image from the Dockerfile in the current directory
+    build: .
+
+    command: bash -c "gunicorn --bind $${BIND_INTERFACE}:$${CONTAINER_PORT} --graceful-timeout $${GRACEFUL_TIMEOUT} --timeout $${TIMEOUT} --worker-connections $${WORKER_CONNECTIONS} --workers $${WORKERS} 'linka_ota_server:create_app()'"
+
     volumes:
-      - ./ota_server/:/usr/src/app/
+      - ./:/usr/src/app/
       - ./bin/:/usr/src/bin/
+
+    # Host the Flask application on port 5000
     ports:
       - 5000:5000
+
+    # Configure the environment
     environment:
       - BIND_INTERFACE=${BIND_INTERFACE:-0.0.0.0}
       - CONTAINER_PORT=${CONTAINER_PORT:-5000}
@@ -17,3 +26,20 @@ services:
       - WORKER_CONNECTIONS=${WORKER_CONNECTIONS:-5}
       - WORKERS=${WORKERS:-3}
       - FIRMWARE_PATH=/usr/src/bin
+
+    develop:
+      # Create a `watch` configuration to update the app
+      # https://docs.docker.com/compose/file-watch/#compose-watch-versus-bind-mounts
+      watch:
+        # Sync the working directory with the `/app` directory in the container
+        - action: sync
+          path: .
+          target: /app
+          # Exclude the project virtual environment — it could be for a
+          # different platform in the container
+          ignore:
+            - .venv/
+
+        # Rebuild the image if dependencies change by checking uv.lock
+        - action: rebuild
+          path: ./uv.lock

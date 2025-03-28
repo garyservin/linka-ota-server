@@ -11,3 +11,26 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
+
+import os
+import pytest
+import sys
+import shutil
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(ROOT_DIR)
+
+from linka_ota_server import create_app
+from linka_ota_server.firmware import create_test_dir
+
+
+@pytest.fixture
+def client():
+    app = create_app({'TESTING': True, 'FIRMWARE_PATH': '/tmp/bin'})
+
+    with app.test_client() as client:
+        with app.app_context():
+            create_test_dir(app.config['FIRMWARE_PATH'])
+        yield client
+
+    shutil.rmtree(app.config['FIRMWARE_PATH'])
