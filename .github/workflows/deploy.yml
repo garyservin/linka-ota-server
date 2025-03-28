@@ -1,9 +1,8 @@
-name: Build project
+---
+name: Deploy linka-ota-server
 
 on:
   push:
-    branches: ["master"]
-  pull_request:
     branches: ["master"]
 
 concurrency:
