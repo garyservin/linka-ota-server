@@ -13,14 +13,14 @@
 # You should have received a copy of the GNU Affero General Public License
 
 import json
-import hashlib
 import os
 import re
 from flask import current_app
 
+
 class FirmwareVersion:
     def __init__(self, firmware, md5sum):
-        self.base_name, self.version = re.split('-v', firmware)
+        self.base_name, self.version = re.split("-v", firmware)
         self.version = self.version.replace(".bin", "")
         self.path = f"{current_app.config['FIRMWARE_PATH']}/{firmware}"
         self.md5sum = md5sum
@@ -35,7 +35,7 @@ class FirmwareVersion:
     @staticmethod
     def get_latest():
         """Get latest version from versions json file."""
-        with open(current_app.config["FIRMWARE_PATH"] + '/' + 'versions') as json_file:
+        with open(current_app.config["FIRMWARE_PATH"] + "/" + "versions") as json_file:
             versions = json.load(json_file)
 
         latest = versions["latest"]

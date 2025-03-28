@@ -12,51 +12,52 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 
+
 def check_headers(headers):
     # Check if the user agent is correct
     if headers.get("User-Agent", None) != "ESP8266-http-Update":
         return (False, "You are not allowed to reach this endpoint")
 
     # Check if headers are correct
-    if not "x-ESP8266-STA-MAC" in headers:
+    if "x-ESP8266-STA-MAC" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-STA-MAC is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-STA-MAC missing",
         )
-    elif not "x-ESP8266-AP-MAC" in headers:
+    if "x-ESP8266-AP-MAC" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-AP-MAC is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-AP-MAC missing",
         )
-    elif not "x-ESP8266-free-space" in headers:
+    if "x-ESP8266-free-space" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-free-space is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-free-space missing",
         )
-    elif not "x-ESP8266-sketch-size" in headers:
+    if "x-ESP8266-sketch-size" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-sketch-size is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-sketch-size missing",
         )
-    elif not "x-ESP8266-sketch-md5" in headers:
+    if "x-ESP8266-sketch-md5" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-sketch-md5 is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-sketch-md5 missing",
         )
-    elif not "x-ESP8266-chip-size" in headers:
+    if "x-ESP8266-chip-size" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-chip-size is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-chip-size missing",
         )
-    elif not "x-ESP8266-sdk-version" in headers:
+    if "x-ESP8266-sdk-version" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-sdk-version is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-sdk-version missing",
         )
-    elif not "x-ESP8266-version" in headers:
+    if "x-ESP8266-version" not in headers:
         return (
             False,
-            "You are not allowed to reach this endpoint, x-ESP8266-version is missing",
+            "You are not allowed to reach this endpoint, x-ESP8266-version missing",
         )
 
     return (True, "")

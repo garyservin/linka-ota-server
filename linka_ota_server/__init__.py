@@ -24,18 +24,17 @@ from flask import (
 from .firmware import FirmwareVersion
 from .headers import check_headers
 
+
 def create_app(test_config=None):
     """Create and configure an instance of the Flask application."""
     app = Flask(__name__, instance_relative_config=True)
 
     # Configure app
-    app.config.from_mapping(
-        FIRMWARE_PATH=os.environ.get("FIRMWARE_PATH", "../bin")
-    )
+    app.config.from_mapping(FIRMWARE_PATH=os.environ.get("FIRMWARE_PATH", "../bin"))
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
-        app.config.from_pyfile('config.py', silent=True)
+        app.config.from_pyfile("config.py", silent=True)
     else:
         # load the test config if passed in
         app.config.from_mapping(test_config)
@@ -51,7 +50,7 @@ def create_app(test_config=None):
         """Healtcheck for service."""
         return ""
 
-    @app.route("/ota", methods=['GET'])
+    @app.route("/ota", methods=["GET"])
     def ota():
         headers = request.headers
 
@@ -82,13 +81,13 @@ def create_app(test_config=None):
         response.headers["x-MD5"] = latest_firmware.md5sum
         return response
 
-    @app.route("/latest_firmware", methods=['GET', 'OPTIONS'])
+    @app.route("/latest_firmware", methods=["GET", "OPTIONS"])
     def latest_firmware():
-        if request.method == "OPTIONS": # CORS preflight
+        if request.method == "OPTIONS":  # CORS preflight
             response = make_response()
             response.headers.add("Access-Control-Allow-Origin", "*")
-            response.headers.add('Access-Control-Allow-Headers', "*")
-            response.headers.add('Access-Control-Allow-Methods', "*")
+            response.headers.add("Access-Control-Allow-Headers", "*")
+            response.headers.add("Access-Control-Allow-Methods", "*")
             return response
 
         # Get latest version
@@ -103,9 +102,7 @@ def create_app(test_config=None):
             )
         )
         response.headers.add("Content-Length", latest_firmware.size)
-        response.headers.add("Access-Control-Allow-Origin","*")
+        response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
     return app
-
-

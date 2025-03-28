@@ -9,8 +9,11 @@ dependencies = [
     "gunicorn",
 ]
 
-[project.scripts]
-hello = "linka_ota_server:create_app"
+[tool.black]
+line-length = 88
+
+[tool.flake8]
+max-line-length = 88
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
