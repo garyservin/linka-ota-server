@@ -10,8 +10,7 @@ services:
     command: bash -c "gunicorn --bind $${BIND_INTERFACE}:$${CONTAINER_PORT} --graceful-timeout $${GRACEFUL_TIMEOUT} --timeout $${TIMEOUT} --worker-connections $${WORKER_CONNECTIONS} --workers $${WORKERS} 'linka_ota_server:create_app()'"
 
     volumes:
-      - ./:/usr/src/app/
-      - ./bin/:/usr/src/bin/
+      - ./bin/:/app/bin/
 
     # Host the Flask application on port 5000
     ports:
@@ -25,7 +24,7 @@ services:
       - TIMEOUT=${TIMEOUT:-300}
       - WORKER_CONNECTIONS=${WORKER_CONNECTIONS:-5}
       - WORKERS=${WORKERS:-3}
-      - FIRMWARE_PATH=/usr/src/bin
+      - FIRMWARE_PATH=/app/bin
 
     develop:
       # Create a `watch` configuration to update the app

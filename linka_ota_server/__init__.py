@@ -19,6 +19,7 @@ from flask import (
     make_response,
     request,
     send_file,
+    send_from_directory,
 )
 
 from .firmware import FirmwareVersion
@@ -44,6 +45,16 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    @app.route("/", methods=["GET"])
+    def flasher():
+        """Flasher page for linka sensors."""
+        return send_from_directory("/app/static", "index.html")
+
+    @app.route("/manifest.json", methods=["GET"])
+    def manifest():
+        """Serve the manifest.json file for the flasher."""
+        return send_from_directory("/app/static", "manifest.json")
 
     @app.route("/up", methods=["GET"])
     def up():
