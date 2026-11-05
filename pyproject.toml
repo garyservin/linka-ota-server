@@ -1,6 +1,7 @@
 [project]
 name = "linka-ota-server"
-version = "0.2.0"
+# Not used: releases are versioned by git tags (vX.Y.Z), see README.md
+version = "0.0.0"
 description = "Remote OTA Server for Linka Sensors using linka-firmware"
 readme = "README.md"
 requires-python = ">=3.12"

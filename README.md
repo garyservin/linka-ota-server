@@ -28,12 +28,16 @@ docker compose up -d --build
 | Tag `vX.Y.Z` | ✅ | `X.Y.Z`, `X.Y`, `latest`, `sha-<commit>` | yes |
 
 ### Releasing a new version
-1. Bump `version` in `pyproject.toml` (and run `uv lock`) in a PR, and merge it.
-2. Create the release from `master`:
+The git tag is the version: there is no version to bump in the code
+(`version` in `pyproject.toml` is a placeholder).
+
+1. Merge the changes to `master`.
+2. Create the release from `master`, choosing the next version:
    ```
+   gh release list --limit 1        # latest release
    gh release create vX.Y.Z --target master --generate-notes
    ```
-3. CI checks that the tag matches `pyproject.toml` and is on `master`, publishes the
+3. CI checks that the tag is a version (`vX.Y.Z`) and is on `master`, publishes the
    image and deploys it with the self-hosted runner in `/home/gary/linka/linka-ota-server`.
    The deploy waits until `/version` reports the new version, and writes `IMAGE_TAG=X.Y.Z`
    to `.env` there.
