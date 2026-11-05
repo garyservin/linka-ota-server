@@ -31,6 +31,10 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Firmware files are not part of the image: mount them at /app/bin
 ENV FIRMWARE_PATH=/app/bin
 
+# Version reported by /version, set by CI (X.Y.Z for releases)
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
+
 # Reset the entrypoint, don't invoke `uv`
 ENTRYPOINT []
 

@@ -16,3 +16,6 @@ build/
 
 bin
 cli
+
+# Deployed IMAGE_TAG (written by CI on the server)
+.env
