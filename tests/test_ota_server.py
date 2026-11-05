@@ -31,7 +31,7 @@ def test_healthcheck(client):
 
 
 def test_wrong_route(client):
-    response = client.get("/")
+    response = client.get("/does-not-exist")
     assert response.status_code == 404
 
 
@@ -43,6 +43,8 @@ def test_wrong_headers(client):
 def test_correct_headers(client):
     response = client.get("/ota", headers=correct_headers)
     assert response.status_code == 200
+    assert response.headers.getlist("Content-Length") == ["6"]
+    assert response.headers.get("x-MD5") == "c7f57af6623c7865ddbb6b564916aafd"
 
 
 def test_correct_headers_no_update(client):
@@ -56,7 +58,7 @@ def test_correct_headers_no_update(client):
 def test_latest_firmware(client):
     response = client.get("/latest_firmware")
     assert response.status_code == 200
-    assert response.headers.get("Content-Length") == "6"
+    assert response.headers.getlist("Content-Length") == ["6"]
     assert (
         response.headers.get("Content-Disposition")
         == "attachment; filename=linka-firmware-v0.0.2.bin"
@@ -130,3 +132,15 @@ def test_wrong_headers_esp_version_missing(client):
     headers.pop("x-ESP8266-version")
     response = client.get("/ota", headers=headers)
     assert response.status_code == 403
+
+
+def test_web_flasher(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"esp-web-install-button" in response.data
+
+
+def test_web_flasher_manifest(client):
+    response = client.get("/manifest.json")
+    assert response.status_code == 200
+    assert response.json["builds"][0]["chipFamily"] == "ESP8266"
