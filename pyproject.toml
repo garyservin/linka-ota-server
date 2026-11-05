@@ -25,8 +25,5 @@ source = ["linka_ota_server"]
 [dependency-groups]
 dev = [
     "coverage>=7.7.1",
-    "lark>=1.2.2",
-    "pylark>=0.0.13",
     "pytest>=8.3.5",
-    "pyyaml>=6.0.2",
 ]
