@@ -28,6 +28,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Firmware files are not part of the image: mount them at /app/bin
+ENV FIRMWARE_PATH=/app/bin
+
 # Reset the entrypoint, don't invoke `uv`
 ENTRYPOINT []
 
