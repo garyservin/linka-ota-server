@@ -8,8 +8,10 @@ Install [uv](https://docs.astral.sh/uv/), then:
 ```
 $ uv sync
 $ uv run pytest
-$ FIRMWARE_PATH=./bin uv run gunicorn --bind 0.0.0.0:5000 'linka_ota_server:create_app()'
+$ uv run gunicorn --bind 0.0.0.0:5000 'linka_ota_server:create_app()'
 ```
+Firmware files are read from `bin/` in the repo (see below). Set `FIRMWARE_PATH` to use
+another directory.
 
 ### Using docker compose
 Build the image locally and start the service:
