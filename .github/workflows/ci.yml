@@ -1,0 +1,138 @@
+name: CI/CD
+
+# Pull requests: run tests and check that the Docker image builds.
+# Push to master: tests -> publish image to GHCR -> deploy on the server.
+# Tags vX.Y.Z: tests -> publish versioned image (no deploy).
+on:
+  push:
+    branches: ["master"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["master"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a run on master half-way through a deploy
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.6.10"
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Install the project
+        run: uv sync --locked --dev
+
+      - name: Run tests with coverage
+        run: uv run coverage run -m pytest && uv run coverage report && uv run coverage xml
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image tags and labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          # latest      -> latest commit on master
+          # sha-<sha>   -> every build; the deploy job uses this exact tag
+          # 1.2.3, 1.2  -> from v1.2.3 git tags
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=long
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: docker
+    # Only pushes to master deploy; pull requests never reach the self-hosted runner
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: self-hosted
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_DIR: /home/gary/linka/linka-ota-server
+      # Deploy exactly the image built from this commit
+      IMAGE_TAG: sha-${{ github.sha }}
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull image and restart service
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          docker compose pull ota
+          docker compose up -d --no-build --wait ota
+
+      - name: Health check
+        working-directory: ${{ env.DEPLOY_DIR }}
+        run: |
+          # Fails if compose.yaml on the server is outdated and ignores IMAGE_TAG
+          running=$(docker inspect "$(docker compose ps -q ota)" --format '{{.Config.Image}}')
+          if [ "$running" != "$IMAGE:$IMAGE_TAG" ]; then
+            echo "Running image is '$running', expected '$IMAGE:$IMAGE_TAG'. Is compose.yaml on the server up to date?"
+            exit 1
+          fi
+          for i in $(seq 1 10); do
+            if docker compose exec -T ota python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/up')"; then
+              echo "Service is up"; exit 0
+            fi
+            sleep 3
+          done
+          echo "Service did not become healthy"; docker compose logs --tail 50 ota; exit 1
+
+      - name: Remove old images
+        if: always()
+        run: docker image prune -f

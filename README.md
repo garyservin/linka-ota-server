@@ -3,26 +3,36 @@
 Remote OTA Server for [Linka sensors](https://github.com/melizeche/AireLibre/) using [linka-firmware](https://github.com/garyservin/linka-firmware)
 
 ## Development instructions
-### Using python vevn directly
-Install
+### Using uv
+Install [uv](https://docs.astral.sh/uv/), then:
 ```
-$ sudo apt install python3-devel
-$ python3 -m venv venv
-$ source ./venv/bin/activate
-$ pip install -r requirements.txt
-```
-
-Run
-```
-$ source ./venv/bin/activate
-$ gunicorn --bind 0.0.0.0:5000 wsgi:app
+$ uv sync
+$ uv run pytest
+$ FIRMWARE_PATH=./bin uv run gunicorn --bind 0.0.0.0:5000 'linka_ota_server:create_app()'
 ```
 
-### Using docker and docker-compose
-1. Start the services
+### Using docker compose
+Build the image locally and start the service:
 ```
-docker compose -f docker-compose.yaml up -d --build
+docker compose up -d --build
 ```
+
+## Deployment
+`.github/workflows/ci.yml` runs on every push to `master`:
+1. Runs the tests (GitHub-hosted runner).
+2. Builds the Docker image and publishes it to `ghcr.io/garyservin/linka-ota-server`
+   with the tags `latest` and `sha-<commit>` (`vX.Y.Z` git tags also publish `X.Y.Z` / `X.Y`).
+3. Deploys it on the server with the self-hosted runner: pulls `sha-<commit>`, restarts
+   the service in `/home/gary/linka/linka-ota-server` and checks `/up`.
+
+Pull requests only run steps 1 and 2 (without publishing).
+
+To update the server manually, next to `compose.yaml` and the `bin/` firmware directory:
+```
+docker compose pull && docker compose up -d
+```
+
+The firmware is not part of the image: it is read from `bin/`, which is mounted at `/app/bin`.
 
 ## Firmware directory storage
 ### Directory hierarchy

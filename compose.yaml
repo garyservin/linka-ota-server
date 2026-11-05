@@ -4,7 +4,13 @@ services:
     # Set the container name
     container_name: linka_ota_server
 
-    # Build the image from the Dockerfile in the current directory
+    # Image published to GHCR by .github/workflows/ci.yml, which also deploys
+    # it on every push to master (IMAGE_TAG=sha-<commit>).
+    # Manual update: docker compose pull && docker compose up -d
+    image: ghcr.io/garyservin/linka-ota-server:${IMAGE_TAG:-latest}
+
+    # For local development, build from this directory instead:
+    #   docker compose up -d --build
     build: .
 
     command: bash -c "gunicorn --bind $${BIND_INTERFACE}:$${CONTAINER_PORT} --graceful-timeout $${GRACEFUL_TIMEOUT} --timeout $${TIMEOUT} --worker-connections $${WORKER_CONNECTIONS} --workers $${WORKERS} 'linka_ota_server:create_app()'"

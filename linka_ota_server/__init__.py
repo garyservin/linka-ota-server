@@ -25,6 +25,9 @@ from flask import (
 from .firmware import FirmwareVersion
 from .headers import check_headers
 
+# Static files (web flasher) live next to the package, in <repo>/static
+STATIC_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+
 
 def create_app(test_config=None):
     """Create and configure an instance of the Flask application."""
@@ -49,12 +52,12 @@ def create_app(test_config=None):
     @app.route("/", methods=["GET"])
     def flasher():
         """Flasher page for linka sensors."""
-        return send_from_directory("/app/static", "index.html")
+        return send_from_directory(STATIC_PATH, "index.html")
 
     @app.route("/manifest.json", methods=["GET"])
     def manifest():
         """Serve the manifest.json file for the flasher."""
-        return send_from_directory("/app/static", "manifest.json")
+        return send_from_directory(STATIC_PATH, "manifest.json")
 
     @app.route("/up", methods=["GET"])
     def up():
@@ -88,7 +91,6 @@ def create_app(test_config=None):
                 mimetype="application/octet-stream",
             )
         )
-        response.headers["Content-Length"] = latest_firmware.size
         response.headers["x-MD5"] = latest_firmware.md5sum
         return response
 
@@ -112,7 +114,6 @@ def create_app(test_config=None):
                 mimetype="application/octet-stream",
             )
         )
-        response.headers.add("Content-Length", latest_firmware.size)
         response.headers.add("Access-Control-Allow-Origin", "*")
         return response
 
