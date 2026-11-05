@@ -18,19 +18,34 @@ docker compose up -d --build
 ```
 
 ## Deployment
-`.github/workflows/ci.yml` runs on every push to `master`:
-1. Runs the tests (GitHub-hosted runner).
-2. Builds the Docker image and publishes it to `ghcr.io/garyservin/linka-ota-server`
-   with the tags `latest` and `sha-<commit>` (`vX.Y.Z` git tags also publish `X.Y.Z` / `X.Y`).
-3. Deploys it on the server with the self-hosted runner: pulls `sha-<commit>`, restarts
-   the service in `/home/gary/linka/linka-ota-server` and checks `/up`.
+`.github/workflows/ci.yml` builds and publishes the Docker image to
+`ghcr.io/garyservin/linka-ota-server`:
 
-Pull requests only run steps 1 and 2 (without publishing).
+| Event | Tests | Image tags pushed | Deployed |
+|---|---|---|---|
+| Pull request | ✅ | none (build only) | no |
+| Push to `master` | ✅ | `edge`, `sha-<commit>` | no |
+| Tag `vX.Y.Z` | ✅ | `X.Y.Z`, `X.Y`, `latest`, `sha-<commit>` | yes |
 
-To update the server manually, next to `compose.yaml` and the `bin/` firmware directory:
+### Releasing a new version
+1. Bump `version` in `pyproject.toml` (and run `uv lock`) in a PR, and merge it.
+2. Create the release from `master`:
+   ```
+   gh release create vX.Y.Z --target master --generate-notes
+   ```
+3. CI checks that the tag matches `pyproject.toml` and is on `master`, publishes the
+   image and deploys it with the self-hosted runner in `/home/gary/linka/linka-ota-server`.
+   The deploy waits until `/version` reports the new version, and writes `IMAGE_TAG=X.Y.Z`
+   to `.env` there.
+
+Check the running version with `curl https://linka.servin.dev/version`.
+
+### Rolling back
+On the server, next to `compose.yaml` and the `bin/` firmware directory:
 ```
-docker compose pull && docker compose up -d
+IMAGE_TAG=X.Y.Z docker compose up -d
 ```
+(and update `IMAGE_TAG` in `.env`), or re-run the deploy job of that release in GitHub Actions.
 
 The firmware is not part of the image: it is read from `bin/`, which is mounted at `/app/bin`.
 

@@ -144,3 +144,9 @@ def test_web_flasher_manifest(client):
     response = client.get("/manifest.json")
     assert response.status_code == 200
     assert response.json["builds"][0]["chipFamily"] == "ESP8266"
+
+
+def test_version(client):
+    response = client.get("/version")
+    assert response.status_code == 200
+    assert response.json == {"version": "dev"}

@@ -34,7 +34,11 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
 
     # Configure app
-    app.config.from_mapping(FIRMWARE_PATH=os.environ.get("FIRMWARE_PATH", "../bin"))
+    app.config.from_mapping(
+        FIRMWARE_PATH=os.environ.get("FIRMWARE_PATH", "../bin"),
+        # Set at image build time by CI (X.Y.Z for releases)
+        APP_VERSION=os.environ.get("APP_VERSION", "dev"),
+    )
 
     if test_config is None:
         # load the instance config, if it exists, when not testing
@@ -63,6 +67,11 @@ def create_app(test_config=None):
     def up():
         """Healtcheck for service."""
         return ""
+
+    @app.route("/version", methods=["GET"])
+    def version():
+        """Version of the running service."""
+        return {"version": app.config["APP_VERSION"]}
 
     @app.route("/ota", methods=["GET"])
     def ota():
