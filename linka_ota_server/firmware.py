@@ -14,14 +14,20 @@
 
 import json
 import os
-import re
 from flask import current_app
 
 
 class FirmwareVersion:
     def __init__(self, firmware, md5sum):
-        self.base_name, self.version = re.split("-v", firmware)
-        self.version = self.version.replace(".bin", "")
+        # Expected format: <base_name>-v<version>.bin, where base_name may
+        # itself contain "-v" (e.g. linka-v2-firmware-v1.0.0.bin)
+        base_name, sep, version = firmware.removesuffix(".bin").rpartition("-v")
+        if not sep or not base_name or not version:
+            raise ValueError(
+                f"Invalid firmware file name {firmware!r}, "
+                "expected <name>-v<version>.bin"
+            )
+        self.base_name, self.version = base_name, version
         self.path = f"{current_app.config['FIRMWARE_PATH']}/{firmware}"
         self.md5sum = md5sum
 
