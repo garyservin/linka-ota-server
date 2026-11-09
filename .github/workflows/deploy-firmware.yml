@@ -1,0 +1,112 @@
+name: Deploy firmware
+
+# Installs a linka-firmware release into the OTA server's bin/ directory and
+# updates the versions file. Triggered by linka-firmware's release workflow, or
+# manually: gh workflow run deploy-firmware.yml -f version=X.Y.Z [-f set_latest=false]
+#
+# Setting `latest` makes every sensor update to this version within 24h and makes it
+# the version the web flasher installs.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Firmware version to deploy (X.Y.Z), must be a linka-firmware release
+        required: true
+        type: string
+      set_latest:
+        description: Make this the version served to sensors and the web flasher
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-firmware
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: production
+    env:
+      DEPLOY_DIR: /home/gary/linka/linka-ota-server
+      FIRMWARE_REPO: garyservin/linka-firmware
+      # Inputs are passed through env, never interpolated into scripts
+      VERSION: ${{ inputs.version }}
+      SET_LATEST: ${{ inputs.set_latest }}
+    steps:
+      - name: Validate version
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a version like 1.2.3"; exit 1
+          fi
+          echo "BIN=linka-firmware-v$VERSION.bin" >> "$GITHUB_ENV"
+
+      - name: Download firmware from release
+        run: |
+          tmp="$RUNNER_TEMP/firmware"
+          rm -rf "$tmp" && mkdir -p "$tmp" && cd "$tmp"
+          # Release tags are X.Y.Z (older) or vX.Y.Z
+          for tag in "$VERSION" "v$VERSION"; do
+            base="https://github.com/$FIRMWARE_REPO/releases/download/$tag"
+            if curl -fsSL -o "$BIN" "$base/$BIN" 2>/dev/null; then
+              break
+            fi
+            rm -f "$BIN"
+          done
+          if [ ! -f "$BIN" ]; then
+            echo "::error::$BIN not found in the $VERSION release of $FIRMWARE_REPO"; exit 1
+          fi
+          # Newer releases attach <bin>.md5; older ones only linka-firmware-vX.Y.Z.sha256
+          if curl -fsSL -o "$BIN.md5" "$base/$BIN.md5" 2>/dev/null; then
+            md5sum -c "$BIN.md5"
+          else
+            sha256="linka-firmware-v$VERSION.sha256"
+            if ! curl -fsSL -o "$sha256" "$base/$sha256" 2>/dev/null; then
+              echo "::error::No $BIN.md5 or $sha256 in the $tag release to verify $BIN"; exit 1
+            fi
+            sha256sum -c "$sha256"
+            md5sum "$BIN" > "$BIN.md5"
+          fi
+          echo "MD5=$(cut -d' ' -f1 "$BIN.md5")" >> "$GITHUB_ENV"
+
+      - name: Install firmware and update versions
+        working-directory: ${{ env.DEPLOY_DIR }}/bin
+        run: |
+          # Never silently replace a firmware that sensors may already be running
+          if [ -f "$BIN" ] && [ "$(md5sum < "$BIN" | cut -d' ' -f1)" != "$MD5" ]; then
+            echo "::error::bin/$BIN already exists with a different md5. Remove it by hand to redeploy."; exit 1
+          fi
+          cp "$RUNNER_TEMP/firmware/$BIN" ".$BIN.tmp" && mv ".$BIN.tmp" "$BIN"
+          cp versions versions.bak
+          python3 - <<'EOF'
+          import json, os
+          version, latest = os.environ["VERSION"], os.environ["SET_LATEST"] == "true"
+          with open("versions") as f:
+              versions = json.load(f)
+          versions[version] = {"file": os.environ["BIN"], "md5sum": os.environ["MD5"]}
+          if latest:
+              versions["latest"] = version
+          with open("versions.tmp", "w") as f:
+              json.dump(versions, f, indent=4, sort_keys=True)
+              f.write("\n")
+          os.replace("versions.tmp", "versions")
+          print(json.dumps(versions, indent=4, sort_keys=True))
+          EOF
+
+      - name: Check the server serves the new firmware
+        if: inputs.set_latest
+        run: |
+          if ! served=$(set -o pipefail; curl -fsS http://127.0.0.1:5000/latest_firmware | md5sum | cut -d' ' -f1); then
+            echo "::error::Could not download /latest_firmware from the server. Restoring versions."
+            cp "$DEPLOY_DIR/bin/versions.bak" "$DEPLOY_DIR/bin/versions"
+            exit 1
+          fi
+          if [ "$served" != "$MD5" ]; then
+            echo "::error::Server serves firmware with md5 $served, expected $MD5. Restoring versions."
+            cp "$DEPLOY_DIR/bin/versions.bak" "$DEPLOY_DIR/bin/versions"
+            exit 1
+          fi
+          echo "Serving firmware $VERSION ($MD5)"
