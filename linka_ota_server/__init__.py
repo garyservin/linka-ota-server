@@ -25,8 +25,14 @@ from flask import (
 from .firmware import FirmwareVersion
 from .headers import check_headers
 
-# Static files (web flasher) live next to the package, in <repo>/static
-STATIC_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
+# Directory containing the package: the repo root, or /app in the container
+ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Static files (web flasher) live in <root>/static
+STATIC_PATH = os.path.join(ROOT_PATH, "static")
+
+# Firmware files and the versions file, unless FIRMWARE_PATH is set
+DEFAULT_FIRMWARE_PATH = os.path.join(ROOT_PATH, "bin")
 
 
 def create_app(test_config=None):
@@ -35,7 +41,7 @@ def create_app(test_config=None):
 
     # Configure app
     app.config.from_mapping(
-        FIRMWARE_PATH=os.environ.get("FIRMWARE_PATH", "../bin"),
+        FIRMWARE_PATH=os.environ.get("FIRMWARE_PATH", DEFAULT_FIRMWARE_PATH),
         # Set at image build time by CI (X.Y.Z for releases)
         APP_VERSION=os.environ.get("APP_VERSION", "dev"),
     )
