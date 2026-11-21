@@ -4,6 +4,9 @@ services:
     # Set the container name
     container_name: linka_ota_server
 
+    # Start again after a crash or a server reboot
+    restart: unless-stopped
+
     # Image published to GHCR by .github/workflows/ci.yml. Releases (vX.Y.Z tags)
     # are deployed automatically, and the deploy writes IMAGE_TAG=X.Y.Z to .env
     # so manual `docker compose up -d` keeps running that release.
@@ -19,9 +22,10 @@ services:
     volumes:
       - ./bin/:/app/bin/
 
-    # Host the Flask application on port 5000
+    # Host the Flask application on port 5000, reachable only from this machine
+    # (the reverse proxy and the deploy workflows connect to it locally)
     ports:
-      - 5000:5000
+      - 127.0.0.1:5000:5000
 
     # Configure the environment
     environment:
