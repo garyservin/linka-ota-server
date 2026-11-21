@@ -16,6 +16,11 @@ import json
 import os
 from flask import current_app
 
+# Release tracks a sensor can follow (see FirmwareVersion.get_for_track)
+PRODUCTION = "production"
+DEVEL = "devel"
+TRACKS = (PRODUCTION, DEVEL)
+
 
 class FirmwareVersion:
     def __init__(self, firmware, md5sum):
@@ -39,11 +44,38 @@ class FirmwareVersion:
         return os.path.getsize(self.path)
 
     @staticmethod
-    def get_latest():
-        """Get latest version from versions json file."""
+    def get_for_track(track=PRODUCTION):
+        """Firmware a sensor following `track` should run.
+
+        production: versions["latest"].
+        devel:      versions["devel"], or production when that is newer or no devel
+                    version is set, so devel sensors never fall behind production.
+        """
+        if track not in TRACKS:
+            raise ValueError(f"Unknown track {track!r}, expected one of {TRACKS}")
+
         with open(current_app.config["FIRMWARE_PATH"] + "/" + "versions") as json_file:
             versions = json.load(json_file)
 
-        latest = versions["latest"]
-        version = FirmwareVersion(versions[latest]["file"], versions[latest]["md5sum"])
-        return version
+        version = versions["latest"]
+        devel = versions.get("devel")
+        if track == DEVEL and devel and version_key(devel) > version_key(version):
+            version = devel
+        return FirmwareVersion(versions[version]["file"], versions[version]["md5sum"])
+
+
+def version_key(version):
+    """Sort key for X.Y.Z[-prerelease] versions, following semver precedence.
+
+    A pre-release sorts before its release (0.4.0-rc.1 < 0.4.0); pre-release
+    identifiers compare numerically when they are numbers (rc.2 < rc.10).
+    """
+    release, _, prerelease = version.partition("-")
+    numbers = tuple(int(part) for part in release.split("."))
+    if not prerelease:
+        return (numbers, 1, ())
+    identifiers = tuple(
+        (0, int(part), "") if part.isdigit() else (1, 0, part)
+        for part in prerelease.split(".")
+    )
+    return (numbers, 0, identifiers)

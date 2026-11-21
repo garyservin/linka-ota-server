@@ -22,8 +22,11 @@ from flask import (
     send_from_directory,
 )
 
-from .firmware import FirmwareVersion
+from .firmware import PRODUCTION, TRACKS, FirmwareVersion
 from .headers import check_headers
+
+# Matches /<route>/<track> for any known track, 404 otherwise
+TRACK = f"<any({', '.join(TRACKS)}):track>"
 
 # Directory containing the package: the repo root, or /app in the container
 ROOT_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -79,8 +82,14 @@ def create_app(test_config=None):
         """Version of the running service."""
         return {"version": app.config["APP_VERSION"]}
 
-    @app.route("/ota", methods=["GET"])
-    def ota():
+    # Serve /ota/production directly: sensors don't follow the redirect to /ota that
+    # Flask would otherwise send for a URL matching a route's defaults
+    app.url_map.redirect_defaults = False
+
+    # Sensors follow production at /ota, or a track at /ota/<track> (e.g. /ota/devel)
+    @app.route("/ota", methods=["GET"], defaults={"track": PRODUCTION})
+    @app.route(f"/ota/{TRACK}", methods=["GET"])
+    def ota(track):
         headers = request.headers
 
         # Check headers before we do anything
@@ -88,10 +97,9 @@ def create_app(test_config=None):
         if not result:
             return message, 403
 
-        # Get latest version
-        latest_firmware = FirmwareVersion.get_latest()
+        latest_firmware = FirmwareVersion.get_for_track(track)
 
-        # If client has the same version as the latest one, skip
+        # If client already runs the track's version, skip
         if (
             latest_firmware.version == headers["x-ESP8266-version"]
             and headers["x-ESP8266-sketch-md5"] == latest_firmware.md5sum
@@ -109,8 +117,11 @@ def create_app(test_config=None):
         response.headers["x-MD5"] = latest_firmware.md5sum
         return response
 
-    @app.route("/latest_firmware", methods=["GET", "OPTIONS"])
-    def latest_firmware():
+    @app.route(
+        "/latest_firmware", methods=["GET", "OPTIONS"], defaults={"track": PRODUCTION}
+    )
+    @app.route(f"/latest_firmware/{TRACK}", methods=["GET", "OPTIONS"])
+    def latest_firmware(track):
         if request.method == "OPTIONS":  # CORS preflight
             response = make_response()
             response.headers.add("Access-Control-Allow-Origin", "*")
@@ -118,8 +129,7 @@ def create_app(test_config=None):
             response.headers.add("Access-Control-Allow-Methods", "*")
             return response
 
-        # Get latest version
-        latest_firmware = FirmwareVersion.get_latest()
+        latest_firmware = FirmwareVersion.get_for_track(track)
 
         response = make_response(
             send_file(

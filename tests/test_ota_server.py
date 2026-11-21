@@ -12,6 +12,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 
+import json
+
 correct_headers = {
     "User-Agent": "ESP8266-http-Update",
     "x-ESP8266-STA-MAC": "18:FE:AA:AA:AA:AA",
@@ -150,3 +152,77 @@ def test_version(client):
     response = client.get("/version")
     assert response.status_code == 200
     assert response.json == {"version": "dev"}
+
+
+def set_devel(client, version):
+    """Add a devel version to the test firmware directory."""
+    path = client.application.config["FIRMWARE_PATH"]
+    with open(f"{path}/versions") as f:
+        versions = json.load(f)
+    versions["devel"] = version
+    versions[version] = {
+        "file": f"linka-firmware-v{version}.bin",
+        "md5sum": "d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0",
+    }
+    with open(f"{path}/versions", "w") as f:
+        json.dump(versions, f)
+    with open(f"{path}/linka-firmware-v{version}.bin", "w") as f:
+        f.write(f"v{version}")
+
+
+def test_production_track(client):
+    set_devel(client, "0.0.3-rc.1")
+    for url in ["/ota", "/ota/production"]:
+        response = client.get(url, headers=correct_headers)
+        assert response.status_code == 200, url
+        assert response.headers.get("x-MD5") == "c7f57af6623c7865ddbb6b564916aafd"
+
+
+def test_devel_track(client):
+    set_devel(client, "0.0.3-rc.1")
+    response = client.get("/ota/devel", headers=correct_headers)
+    assert response.status_code == 200
+    assert response.headers.get("x-MD5") == "d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0"
+    assert response.data == b"v0.0.3-rc.1"
+
+
+def test_devel_track_no_update(client):
+    set_devel(client, "0.0.3-rc.1")
+    headers = correct_headers.copy()
+    headers["x-ESP8266-sketch-md5"] = "d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0"
+    headers["x-ESP8266-version"] = "0.0.3-rc.1"
+    response = client.get("/ota/devel", headers=headers)
+    assert response.status_code == 304
+
+
+def test_devel_track_without_devel_version(client):
+    # No devel version set: devel sensors get production
+    response = client.get("/ota/devel", headers=correct_headers)
+    assert response.status_code == 200
+    assert response.headers.get("x-MD5") == "c7f57af6623c7865ddbb6b564916aafd"
+
+
+def test_devel_track_wrong_headers(client):
+    response = client.get("/ota/devel")
+    assert response.status_code == 403
+
+
+def test_unknown_track(client):
+    assert client.get("/ota/beta", headers=correct_headers).status_code == 404
+    assert client.get("/latest_firmware/beta").status_code == 404
+
+
+def test_latest_firmware_tracks(client):
+    set_devel(client, "0.0.3-rc.1")
+    for url, name in [
+        ("/latest_firmware", "linka-firmware-v0.0.2.bin"),
+        ("/latest_firmware/production", "linka-firmware-v0.0.2.bin"),
+        ("/latest_firmware/devel", "linka-firmware-v0.0.3-rc.1.bin"),
+    ]:
+        response = client.get(url)
+        assert response.status_code == 200, url
+        assert (
+            response.headers.get("Content-Disposition")
+            == f"attachment; filename={name}"
+        )
+    assert client.options("/latest_firmware/devel").status_code == 200
