@@ -14,10 +14,12 @@ its setup page:
 So devel sensors get release candidates first, and move on to the release once it is
 published. `/ota/production` is the same as `/ota`.
 
-The web flasher at `/` installs either track, using the manifests `/manifest.json`
-(production) and `/manifest/devel.json`, which give the track's firmware version. The
-firmware of a track can be downloaded from `/latest_firmware` (production) and
-`/latest_firmware/devel`.
+The web flasher at `/` installs either track, then can send the sensor's settings
+(Wi-Fi, API key, location, and the OTA URL of the chosen track) over USB, for firmware
+that supports it (see "Setting up a sensor over USB" in linka-firmware's README).
+It uses the manifests `/manifest.json` (production) and `/manifest/devel.json`, which
+give the track's firmware version. The firmware of a track can be downloaded from
+`/latest_firmware` (production) and `/latest_firmware/devel`.
 
 Firmware is deployed to a track by the "Deploy firmware" workflow, which linka-firmware
 triggers for every release: releases go to production, pre-releases to devel. To run
