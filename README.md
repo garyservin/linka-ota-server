@@ -2,6 +2,28 @@
 
 Remote OTA Server for [Linka sensors](https://github.com/melizeche/AireLibre/) using [linka-firmware](https://github.com/garyservin/linka-firmware)
 
+## Firmware tracks
+Each sensor follows one of two tracks, chosen by the "Server for OTA upgrades" URL in
+its setup page:
+
+| Track | Sensor URL | Serves |
+|---|---|---|
+| production | `https://linka.servin.dev/ota` (the default) | `latest` in the versions file |
+| devel | `https://linka.servin.dev/ota/devel` | `devel`, or `latest` when that is newer or `devel` is not set |
+
+So devel sensors get release candidates first, and move on to the release once it is
+published. `/ota/production` is the same as `/ota`.
+
+The firmware of a track can be downloaded from `/latest_firmware` (production, used by
+the web flasher) and `/latest_firmware/devel`.
+
+Firmware is deployed to a track by the "Deploy firmware" workflow, which linka-firmware
+triggers for every release: releases go to production, pre-releases to devel. To run
+it by hand, e.g. to roll back:
+```
+gh workflow run deploy-firmware.yml -f version=X.Y.Z -f track=production|devel|none
+```
+
 ## Development instructions
 ### Using uv
 Install [uv](https://docs.astral.sh/uv/), then:
@@ -64,6 +86,7 @@ bin
 ├── linka-firmware-v0.0.1.bin
 ├── linka-firmware-v0.0.2.bin
 ├── linka-firmware-v0.0.3.bin
+├── linka-firmware-v0.0.4-rc.1.bin
 └── ...
 ```
 ### versions file format
@@ -71,6 +94,7 @@ The `versions` file is a json file containing each firmware version with the fol
 ```
 {
     "latest": "0.0.3",
+    "devel": "0.0.4-rc.1",
     "0.0.1": {
         "file": "linka-firmware-v0.0.1.bin",
         "md5sum": "7f79518ff0f370823700936b4f10acb9"
@@ -82,6 +106,11 @@ The `versions` file is a json file containing each firmware version with the fol
     "0.0.3": {
         "file": "linka-firmware-v0.0.3.bin",
         "md5sum": "a1ae859790fa8291551978710ac563ad"
+    },
+    "0.0.4-rc.1": {
+        "file": "linka-firmware-v0.0.4-rc.1.bin",
+        "md5sum": "5d41402abc4b2a76b9719d911017c592"
     }
 }
 ```
+`latest` is the production version and `devel` (optional) the devel version.

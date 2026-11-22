@@ -1,11 +1,16 @@
 name: Deploy firmware
 
 # Installs a linka-firmware release into the OTA server's bin/ directory and
-# updates the versions file. Triggered by linka-firmware's release workflow, or
-# manually: gh workflow run deploy-firmware.yml -f version=X.Y.Z [-f set_latest=false]
+# updates the versions file. Triggered by linka-firmware's release workflow (releases
+# go to production, pre-releases to devel), or manually:
+#   gh workflow run deploy-firmware.yml -f version=X.Y.Z [-f track=devel|none]
 #
-# Setting `latest` makes every sensor update to this version within 24h and makes it
-# the version the web flasher installs.
+# Tracks (see the README):
+#   production  sets "latest": every sensor on /ota updates to it within 24h, and the
+#               web flasher installs it. Sensors on /ota/devel get it too when it is
+#               newer than the devel version.
+#   devel       sets "devel": only sensors on /ota/devel update to it.
+#   none        only installs the file, for a later deploy or a manual rollback.
 on:
   workflow_dispatch:
     inputs:
@@ -13,11 +18,12 @@ on:
         description: Firmware version to deploy (X.Y.Z), must be a linka-firmware release
         required: true
         type: string
-      set_latest:
-        description: Make this the version served to sensors and the web flasher
+      track:
+        description: Track to release it on (production also updates the web flasher)
         required: true
-        type: boolean
-        default: true
+        type: choice
+        options: [production, devel, none]
+        default: production
 
 concurrency:
   group: deploy-firmware
@@ -35,7 +41,7 @@ jobs:
       FIRMWARE_REPO: garyservin/linka-firmware
       # Inputs are passed through env, never interpolated into scripts
       VERSION: ${{ inputs.version }}
-      SET_LATEST: ${{ inputs.set_latest }}
+      TRACK: ${{ inputs.track }}
     steps:
       - name: Validate version
         run: |
@@ -83,12 +89,13 @@ jobs:
           cp versions versions.bak
           python3 - <<'EOF'
           import json, os
-          version, latest = os.environ["VERSION"], os.environ["SET_LATEST"] == "true"
+          version, track = os.environ["VERSION"], os.environ["TRACK"]
           with open("versions") as f:
               versions = json.load(f)
           versions[version] = {"file": os.environ["BIN"], "md5sum": os.environ["MD5"]}
-          if latest:
-              versions["latest"] = version
+          # "latest" is the production track
+          if track in ("production", "devel"):
+              versions["latest" if track == "production" else "devel"] = version
           with open("versions.tmp", "w") as f:
               json.dump(versions, f, indent=4, sort_keys=True)
               f.write("\n")
@@ -97,16 +104,19 @@ jobs:
           EOF
 
       - name: Check the server serves the new firmware
-        if: inputs.set_latest
+        if: inputs.track != 'none'
         run: |
-          if ! served=$(set -o pipefail; curl -fsS http://127.0.0.1:5000/latest_firmware | md5sum | cut -d' ' -f1); then
-            echo "::error::Could not download /latest_firmware from the server. Restoring versions."
+          url=/latest_firmware
+          [ "$TRACK" = production ] || url="/latest_firmware/$TRACK"
+          if ! served=$(set -o pipefail; curl -fsS "http://127.0.0.1:5000$url" | md5sum | cut -d' ' -f1); then
+            echo "::error::Could not download $url from the server. Restoring versions."
             cp "$DEPLOY_DIR/bin/versions.bak" "$DEPLOY_DIR/bin/versions"
             exit 1
           fi
           if [ "$served" != "$MD5" ]; then
-            echo "::error::Server serves firmware with md5 $served, expected $MD5. Restoring versions."
+            # On devel this also happens when production is newer than $VERSION
+            echo "::error::The $TRACK track serves firmware with md5 $served, expected $MD5. Restoring versions."
             cp "$DEPLOY_DIR/bin/versions.bak" "$DEPLOY_DIR/bin/versions"
             exit 1
           fi
-          echo "Serving firmware $VERSION ($MD5)"
+          echo "Serving firmware $VERSION ($MD5) on the $TRACK track"
