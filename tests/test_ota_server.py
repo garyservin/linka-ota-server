@@ -143,9 +143,22 @@ def test_web_flasher(client):
 
 
 def test_web_flasher_manifest(client):
-    response = client.get("/manifest.json")
-    assert response.status_code == 200
-    assert response.json["builds"][0]["chipFamily"] == "ESP8266"
+    set_devel(client, "0.0.3-rc.1")
+    for url, version, path in [
+        ("/manifest.json", "0.0.2", "/latest_firmware"),
+        ("/manifest/production.json", "0.0.2", "/latest_firmware"),
+        ("/manifest/devel.json", "0.0.3-rc.1", "/latest_firmware/devel"),
+    ]:
+        response = client.get(url)
+        assert response.status_code == 200, url
+        assert response.json["version"] == version
+        build = response.json["builds"][0]
+        assert build["chipFamily"] == "ESP8266"
+        assert build["parts"] == [{"path": path, "offset": 0}]
+        # The firmware the manifest points to is the track's
+        firmware = client.get(path)
+        assert firmware.data == f"v{version}".encode()
+    assert client.get("/manifest/beta.json").status_code == 404
 
 
 def test_version(client):

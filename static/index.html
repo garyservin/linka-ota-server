@@ -1,30 +1,361 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linka Firmware Flasher</title>
+  <meta name="description" content="Install the Linka air quality sensor firmware from your browser.">
+  <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
+  <style>
+    :root {
+      --bg: #f4f6f5;
+      --card: #ffffff;
+      --text: #17211c;
+      --muted: #5b6b63;
+      --border: #dce3df;
+      --accent: #1f8a5b;
+      --accent-text: #ffffff;
+      --accent-soft: #e5f3ec;
+      --warn-soft: #fff4e0;
+      --warn-border: #f0cf8f;
+      --code-bg: #eef2f0;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101513;
+        --card: #18201c;
+        --text: #e6ece9;
+        --muted: #9aaaa2;
+        --border: #2b3631;
+        --accent: #3fb47f;
+        --accent-text: #08120d;
+        --accent-soft: #1b2d24;
+        --warn-soft: #2d2615;
+        --warn-border: #6b5524;
+        --code-bg: #222c27;
+      }
+    }
 
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 48px 16px 32px;
+    }
+    header { margin-bottom: 28px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: var(--accent-text);
+      display: grid;
+      place-items: center;
+      flex: none;
+    }
+    h1 {
+      font-size: 1.6rem;
+      line-height: 1.2;
+      margin: 0;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin: 10px 0 0;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    h2 {
+      font-size: 1rem;
+      margin: 0 0 14px;
+    }
+
+    /* Track choice */
+    .tracks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      border: 0;
+      padding: 0;
+      margin: 0 0 20px;
+    }
+    @media (max-width: 480px) {
+      .tracks { grid-template-columns: 1fr; }
+    }
+    .track {
+      position: relative;
+      display: block;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color .15s, background-color .15s;
+    }
+    .track:hover { border-color: var(--accent); }
+    .track input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .track:has(input:checked) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .track:has(input:focus-visible) {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .track-name {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      font-weight: 600;
+    }
+    .version {
+      font: 500 .8rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .track-desc {
+      display: block;
+      color: var(--muted);
+      font-size: .9rem;
+      margin-top: 4px;
+    }
+
+    /* Install button */
+    esp-web-install-button button {
+      appearance: none;
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 14px 20px;
+      background: var(--accent);
+      color: var(--accent-text);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter .15s;
+    }
+    esp-web-install-button button:hover { filter: brightness(1.08); }
+    esp-web-install-button button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .unsupported {
+      display: block;
+      border: 1px solid var(--warn-border);
+      background: var(--warn-soft);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+
+    .devel-note {
+      margin: 16px 0 0;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: var(--warn-soft);
+      border: 1px solid var(--warn-border);
+      font-size: .92rem;
+    }
+    .devel-note[hidden] { display: none; }
+    .url-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    code, .url {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .88em;
+      background: var(--code-bg);
+      border-radius: 6px;
+      padding: 2px 6px;
+    }
+    .url {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 10px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .copy {
+      flex: none;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0 12px;
+      font: inherit;
+      font-size: .85rem;
+      cursor: pointer;
+    }
+    .copy:hover { border-color: var(--accent); }
+
+    ol {
+      margin: 0;
+      padding-left: 1.3em;
+    }
+    li + li { margin-top: 8px; }
+    li::marker {
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .muted { color: var(--muted); }
+
+    footer {
+      color: var(--muted);
+      font-size: .85rem;
+      text-align: center;
+      margin-top: 24px;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
 <body>
-    <h1>Linka Firmware Flasher</h1>
+  <main>
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>
+          </svg>
+        </div>
+        <h1>Linka Firmware Flasher</h1>
+      </div>
+      <p class="subtitle">
+        Install the firmware of your Linka air quality sensor straight from the browser.
+      </p>
+    </header>
 
-    <div id="main" style="display: none;">
+    <section class="card">
+      <h2>1. Choose a version</h2>
+      <fieldset class="tracks">
+        <legend class="muted" style="position:absolute;left:-9999px">Firmware track</legend>
+        <label class="track">
+          <input type="radio" name="track" value="production" checked>
+          <span class="track-name">Production <span class="version" id="version-production">…</span></span>
+          <span class="track-desc">The stable release. Recommended for every sensor.</span>
+        </label>
+        <label class="track">
+          <input type="radio" name="track" value="devel">
+          <span class="track-name">Devel <span class="version" id="version-devel">…</span></span>
+          <span class="track-desc">Release candidates, for testing new features first.</span>
+        </label>
+      </fieldset>
 
-        <script type="module" src="https://unpkg.com/esp-web-tools@3.4.2/dist/web/install-button.js?module"></script>
-        <esp-web-install-button id="installButton" manifest="manifest.json"></esp-web-install-button>
-        <br><br>
-        <span>NOTE2: If the flashing fails, try again.</span>
-    </div>
-    <div id="notSupported" style="display: none;">
-        Your browser does not support the Web Serial API.
-    </div>
+      <h2>2. Connect the sensor and install</h2>
+      <esp-web-install-button id="install" manifest="manifest.json">
+        <button slot="activate" id="install-label">Connect &amp; install</button>
+        <span slot="unsupported" class="unsupported">
+          Your browser can't talk to USB serial devices. Open this page in
+          <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong> on a computer.
+        </span>
+        <span slot="not-allowed" class="unsupported">
+          Flashing only works on pages served over HTTPS (or from localhost).
+        </span>
+      </esp-web-install-button>
 
-    <script>
-        if(navigator.serial){
-            document.getElementById("notSupported").style.display = 'none';
-            document.getElementById("main").style.display = 'block';
-        } else {
-            document.getElementById("notSupported").style.display = 'block';
-            document.getElementById("main").style.display = 'none';
-        }
-    </script>
+      <div class="devel-note" id="devel-note" hidden>
+        <strong>Keep the sensor on devel:</strong> after installing, open the sensor's setup
+        page and set <em>Server for OTA upgrades</em> to the address below. Otherwise it
+        goes back to the production version at its next update check.
+        <div class="url-row">
+          <span class="url" id="devel-url"></span>
+          <button class="copy" id="copy" type="button">Copy</button>
+        </div>
+      </div>
+    </section>
 
+    <section class="card">
+      <h2>How it works</h2>
+      <ol>
+        <li>Plug the sensor into this computer with a USB <em>data</em> cable (some cables only charge).</li>
+        <li>Click <strong>Connect &amp; install</strong>, pick the sensor's serial port and confirm.
+            Erasing the device gives a clean install, but also clears its Wi-Fi and settings.</li>
+        <li>When it finishes, the sensor restarts and opens its own Wi-Fi network. Connect to it
+            to set your Wi-Fi, the sensor's location and its API key.</li>
+        <li>From then on the sensor checks for updates once a day and installs them by itself.</li>
+      </ol>
+      <p class="muted" style="margin:16px 0 0">
+        If flashing fails, unplug the sensor, plug it back in and try again.
+      </p>
+    </section>
+
+    <footer>
+      <a href="https://github.com/garyservin/linka-firmware">linka-firmware</a>
+      · <a href="https://github.com/melizeche/AireLibre">AireLibre</a>
+    </footer>
+  </main>
+
+  <script>
+    const MANIFESTS = { production: "manifest.json", devel: "manifest/devel.json" };
+    const versions = {};
+    const install = document.getElementById("install");
+    const label = document.getElementById("install-label");
+    const develNote = document.getElementById("devel-note");
+    const develUrl = new URL("ota/devel", location.href).href;
+    document.getElementById("devel-url").textContent = develUrl;
+
+    function selectedTrack() {
+      return document.querySelector("input[name=track]:checked").value;
+    }
+
+    function update() {
+      const track = selectedTrack();
+      install.setAttribute("manifest", MANIFESTS[track]);
+      label.textContent = versions[track]
+        ? `Connect & install ${versions[track]}`
+        : "Connect & install";
+      develNote.hidden = track !== "devel";
+    }
+
+    document.querySelectorAll("input[name=track]").forEach((input) =>
+      input.addEventListener("change", update));
+
+    // Show the version each track installs
+    for (const [track, manifest] of Object.entries(MANIFESTS)) {
+      fetch(manifest)
+        .then((response) => response.ok ? response.json() : Promise.reject(response.status))
+        .then((data) => {
+          versions[track] = data.version;
+          document.getElementById(`version-${track}`).textContent = `v${data.version}`;
+          update();
+        })
+        .catch(() => {
+          document.getElementById(`version-${track}`).textContent = "";
+        });
+    }
+
+    document.getElementById("copy").addEventListener("click", async (event) => {
+      try {
+        await navigator.clipboard.writeText(develUrl);
+        event.target.textContent = "Copied";
+        setTimeout(() => (event.target.textContent = "Copy"), 1500);
+      } catch {
+        getSelection().selectAllChildren(document.getElementById("devel-url"));
+      }
+    });
+
+    update();
+  </script>
 </body>
-
 </html>

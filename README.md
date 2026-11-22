@@ -14,8 +14,10 @@ its setup page:
 So devel sensors get release candidates first, and move on to the release once it is
 published. `/ota/production` is the same as `/ota`.
 
-The firmware of a track can be downloaded from `/latest_firmware` (production, used by
-the web flasher) and `/latest_firmware/devel`.
+The web flasher at `/` installs either track, using the manifests `/manifest.json`
+(production) and `/manifest/devel.json`, which give the track's firmware version. The
+firmware of a track can be downloaded from `/latest_firmware` (production) and
+`/latest_firmware/devel`.
 
 Firmware is deployed to a track by the "Deploy firmware" workflow, which linka-firmware
 triggers for every release: releases go to production, pre-releases to devel. To run
@@ -88,7 +90,8 @@ BASE=https://linka.servin.dev
 curl -i "$BASE/up"                  # 200, empty body
 curl "$BASE/version"                # {"version":"X.Y.Z"}
 curl -I "$BASE/"                    # 200, web flasher page
-curl "$BASE/manifest.json"          # web flasher manifest
+curl "$BASE/manifest.json"          # web flasher manifest, production
+curl "$BASE/manifest/devel.json"    # web flasher manifest, devel
 ```
 
 ### Firmware downloads
