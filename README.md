@@ -77,6 +77,63 @@ IMAGE_TAG=X.Y.Z docker compose up -d
 
 The firmware is not part of the image: it is read from `bin/`, which is mounted at `/app/bin`.
 
+## Testing the endpoints
+Set `BASE` to the server to test (e.g. `http://127.0.0.1:5000` for a local one):
+```sh
+BASE=https://linka.servin.dev
+```
+
+### Service
+```sh
+curl -i "$BASE/up"                  # 200, empty body
+curl "$BASE/version"                # {"version":"X.Y.Z"}
+curl -I "$BASE/"                    # 200, web flasher page
+curl "$BASE/manifest.json"          # web flasher manifest
+```
+
+### Firmware downloads
+Each track's firmware: the file name gives its version. `/latest_firmware` is the one
+the web flasher installs.
+```sh
+curl -sSI "$BASE/latest_firmware" | grep -i disposition        # production file name
+curl -sS "$BASE/latest_firmware" | md5sum                      # production md5
+curl -sSI "$BASE/latest_firmware/devel" | grep -i disposition  # devel file name
+curl -sS "$BASE/latest_firmware/devel" | md5sum                # devel md5
+
+curl -OJ "$BASE/latest_firmware"                   # save the production file
+curl -i -X OPTIONS "$BASE/latest_firmware"         # CORS preflight, 200
+```
+
+### OTA, as a sensor would ask
+`/ota` answers 403 without the headers an ESP8266 sends, so define them once, plus a
+helper that prints the status, the md5 of the firmware offered and its file name:
+```sh
+ESP=(-H "User-Agent: ESP8266-http-Update"
+     -H "x-ESP8266-STA-MAC: AA:BB:CC:DD:EE:FF" -H "x-ESP8266-AP-MAC: AA:BB:CC:DD:EE:FE"
+     -H "x-ESP8266-free-space: 2000000" -H "x-ESP8266-sketch-size: 400000"
+     -H "x-ESP8266-chip-size: 4194304" -H "x-ESP8266-sdk-version: 2.2.2")
+
+# ota <path> <version the sensor runs> <md5 of its firmware>
+ota() {
+  curl -sS -o /dev/null "${ESP[@]}" -H "x-ESP8266-version: $2" -H "x-ESP8266-sketch-md5: $3" \
+    -w "%{http_code} %header{x-md5} %header{content-disposition}\n" "$BASE$1"
+}
+```
+Then, using the versions and md5s of each track from above:
+```sh
+ota /ota 0.0.0 0                               # sensor on an old version: 200, offered production
+ota /ota <production version> <production md5> # sensor up to date: 304
+ota /ota/production <production version> <production md5>   # same as /ota: 304
+ota /ota/devel 0.0.0 0                         # devel sensor on an old version: 200, offered devel
+ota /ota/devel <devel version> <devel md5>     # devel sensor up to date: 304
+
+curl -sS -o /dev/null -w "%{http_code}\n" "$BASE/ota"   # no ESP headers: 403
+ota /ota/beta 0.0.0 0                                     # unknown track: 404
+```
+200 means a sensor in that state would update to the firmware shown, 304 that it already
+runs it. Replace `-o /dev/null` with `-o fw.bin` to keep the firmware. `%header{...}`
+needs curl 7.84 or newer; with an older curl, use `-D -` to print all response headers.
+
 ## Firmware directory storage
 ### Directory hierarchy
 Your directory should look like this
