@@ -62,15 +62,35 @@ def create_app(test_config=None):
     except OSError:
         pass
 
+    # Serve e.g. /ota/production directly: sensors don't follow the redirect to /ota
+    # that Flask would otherwise send for a URL matching a route's defaults
+    app.url_map.redirect_defaults = False
+
     @app.route("/", methods=["GET"])
     def flasher():
         """Flasher page for linka sensors."""
         return send_from_directory(STATIC_PATH, "index.html")
 
-    @app.route("/manifest.json", methods=["GET"])
-    def manifest():
-        """Serve the manifest.json file for the flasher."""
-        return send_from_directory(STATIC_PATH, "manifest.json")
+    @app.route("/manifest.json", methods=["GET"], defaults={"track": PRODUCTION})
+    @app.route(f"/manifest/{TRACK}.json", methods=["GET"])
+    def manifest(track):
+        """ESP Web Tools manifest for the web flasher, for the track's firmware."""
+        firmware = FirmwareVersion.get_for_track(track)
+        path = (
+            "/latest_firmware" if track == PRODUCTION else f"/latest_firmware/{track}"
+        )
+        return {
+            "name": "Linka firmware",
+            "version": firmware.version,
+            "new_install_prompt_erase": True,
+            "builds": [
+                {
+                    "chipFamily": "ESP8266",
+                    # Relative to the manifest URL, so it works on any host
+                    "parts": [{"path": path, "offset": 0}],
+                }
+            ],
+        }
 
     @app.route("/up", methods=["GET"])
     def up():
@@ -81,10 +101,6 @@ def create_app(test_config=None):
     def version():
         """Version of the running service."""
         return {"version": app.config["APP_VERSION"]}
-
-    # Serve /ota/production directly: sensors don't follow the redirect to /ota that
-    # Flask would otherwise send for a URL matching a route's defaults
-    app.url_map.redirect_defaults = False
 
     # Sensors follow production at /ota, or a track at /ota/<track> (e.g. /ota/devel)
     @app.route("/ota", methods=["GET"], defaults={"track": PRODUCTION})
