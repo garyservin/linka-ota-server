@@ -90,7 +90,10 @@
     /* Track choice */
     .tracks {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* minmax(0, ...) and min-width: 0 (fieldsets grow to their content by default)
+         keep both cards the same width with long versions, e.g. test builds */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-width: 0;
       gap: 12px;
       border: 0;
       padding: 0;
@@ -124,6 +127,7 @@
     }
     .track-name {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: baseline;
       gap: 8px;
@@ -132,7 +136,8 @@
     .version {
       font: 500 .8rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: var(--muted);
-      white-space: nowrap;
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
     .track-desc {
       display: block;
@@ -464,6 +469,13 @@
                 <span class="hint">Leave empty to keep the current one.</span>
               </div>
               <div class="field wide">
+                <label for="ota_password">Password for uploads over the local network</label>
+                <input type="password" id="ota_password" autocomplete="new-password" spellcheck="false" data-max-bytes="32">
+                <span class="hint">Needed to upload firmware to the sensor from a computer on its
+                  Wi-Fi network (PlatformIO/Arduino OTA). Without one, anyone on that network can.
+                  Leave empty to keep the current one; it applies when the sensor restarts.</span>
+              </div>
+              <div class="field wide">
                 <span class="hint">Firmware updates come from the <strong id="ota-track">production</strong>
                   track chosen in step 1 (<span id="ota-url"></span>).</span>
               </div>
@@ -564,7 +576,7 @@
        a LINKA_CONFIG line for a couple of seconds.
        ------------------------------------------------------------------ */
     const SENSOR_FIELDS = ["wifi_ssid", "wifi_password", "api_key", "latitude", "longitude",
-                           "description", "sensor", "api_url"];
+                           "description", "sensor", "api_url", "ota_password"];
     const form = document.getElementById("settings");
     const sendButton = document.getElementById("send");
     const formError = document.getElementById("form-error");
@@ -697,7 +709,7 @@
         const input = document.getElementById(name);
         input.removeAttribute("aria-invalid");
         // Passwords may legitimately start or end with spaces
-        const value = name === "wifi_password" ? input.value : input.value.trim();
+        const value = name.endsWith("_password") ? input.value : input.value.trim();
         if (value === "") continue;
         const maxBytes = Number(input.dataset.maxBytes || 0);
         if (maxBytes && byteLength(value) > maxBytes) {
