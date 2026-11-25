@@ -90,7 +90,10 @@
     /* Track choice */
     .tracks {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* minmax(0, ...) and min-width: 0 (fieldsets grow to their content by default)
+         keep both cards the same width with long versions, e.g. test builds */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-width: 0;
       gap: 12px;
       border: 0;
       padding: 0;
@@ -124,6 +127,7 @@
     }
     .track-name {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: baseline;
       gap: 8px;
@@ -132,7 +136,8 @@
     .version {
       font: 500 .8rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: var(--muted);
-      white-space: nowrap;
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
     .track-desc {
       display: block;
