@@ -90,7 +90,10 @@
     /* Track choice */
     .tracks {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* minmax(0, ...) and min-width: 0 (fieldsets grow to their content by default)
+         keep both cards the same width with long versions, e.g. test builds */
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-width: 0;
       gap: 12px;
       border: 0;
       padding: 0;
@@ -124,6 +127,7 @@
     }
     .track-name {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: baseline;
       gap: 8px;
@@ -132,7 +136,8 @@
     .version {
       font: 500 .8rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
       color: var(--muted);
-      white-space: nowrap;
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
     .track-desc {
       display: block;
@@ -220,6 +225,124 @@
     }
     .muted { color: var(--muted); }
 
+    /* Settings form */
+    .form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 12px;
+    }
+    @media (max-width: 480px) {
+      .form { grid-template-columns: 1fr; }
+    }
+    .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .field.wide { grid-column: 1 / -1; }
+    .field label { font-size: .88rem; font-weight: 600; }
+    .field .hint { font-size: .8rem; color: var(--muted); }
+    .form-group {
+      grid-column: 1 / -1;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    input[type=text], input[type=password], input[type=url], select {
+      width: 100%;
+      font: inherit;
+      font-size: .95rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+    }
+    input:focus, select:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+      border-color: transparent;
+    }
+    input[aria-invalid=true] { border-color: #d64545; }
+    .with-button { display: flex; gap: 8px; }
+    .with-button input { flex: 1; min-width: 0; }
+    .secondary {
+      flex: none;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0 12px;
+      font: inherit;
+      font-size: .85rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .secondary:hover { border-color: var(--accent); }
+    .location-row { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: -6px; }
+    details.advanced { grid-column: 1 / -1; }
+    details.advanced summary { cursor: pointer; color: var(--muted); font-size: .9rem; }
+    details.advanced .form { margin-top: 12px; }
+    .primary {
+      appearance: none;
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 14px 20px;
+      margin-top: 20px;
+      background: var(--accent);
+      color: var(--accent-text);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .primary:hover { filter: brightness(1.08); }
+    .primary:disabled { opacity: .6; cursor: progress; filter: none; }
+    .form-error { color: #d64545; font-size: .9rem; margin: 10px 0 0; }
+    .form-error:empty { display: none; }
+
+    /* Progress of sending the settings */
+    .progress {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+      font-size: .92rem;
+    }
+    .progress:empty { display: none; }
+    .progress li { display: flex; gap: 10px; align-items: baseline; }
+    .progress li + li { margin-top: 6px; }
+    .progress li::before {
+      content: "";
+      flex: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translateY(1px);
+      background: var(--border);
+    }
+    .progress li.running::before { background: var(--accent); animation: pulse 1s infinite alternate; }
+    .progress li.done::before { background: var(--accent); }
+    .progress li.failed::before { background: #d64545; }
+    .progress li.failed { color: var(--text); }
+    .progress li.done.final { font-weight: 600; }
+    @keyframes pulse { from { opacity: .3; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .progress li.running::before { animation: none; }
+    }
+    details.log { margin-top: 12px; font-size: .85rem; }
+    details.log[hidden] { display: none; }
+    details.log summary { cursor: pointer; color: var(--muted); }
+    details.log pre {
+      max-height: 220px;
+      overflow: auto;
+      background: var(--code-bg);
+      border-radius: 8px;
+      padding: 10px;
+      margin: 8px 0 0;
+      font-size: .78rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
     footer {
       color: var(--muted);
       font-size: .85rem;
@@ -275,9 +398,10 @@
       </esp-web-install-button>
 
       <div class="devel-note" id="devel-note" hidden>
-        <strong>Keep the sensor on devel:</strong> after installing, open the sensor's setup
-        page and set <em>Server for OTA upgrades</em> to the address below. Otherwise it
-        goes back to the production version at its next update check.
+        <strong>Keep the sensor on devel:</strong> step 3 sets this up for you. If you set
+        the sensor up from its own Wi-Fi network instead, set <em>Server for OTA
+        upgrades</em> to the address below, or it goes back to the production version at
+        its next update check.
         <div class="url-row">
           <span class="url" id="devel-url"></span>
           <button class="copy" id="copy" type="button">Copy</button>
@@ -286,13 +410,90 @@
     </section>
 
     <section class="card">
+      <h2>3. Set up the sensor</h2>
+      <p class="muted" style="margin:-6px 0 16px;font-size:.92rem">
+        Send the settings over the same USB cable, so the sensor starts working right away.
+        Close the installer window first. Fields left empty keep the sensor's current value,
+        so this also changes the settings of an installed sensor.
+      </p>
+      <form id="settings" novalidate>
+        <div class="form">
+          <div class="form-group">Wi-Fi</div>
+          <div class="field">
+            <label for="wifi_ssid">Network name</label>
+            <input type="text" id="wifi_ssid" autocomplete="off" spellcheck="false" data-max-bytes="32">
+          </div>
+          <div class="field">
+            <label for="wifi_password">Password</label>
+            <div class="with-button">
+              <input type="password" id="wifi_password" autocomplete="off" spellcheck="false" data-max-bytes="64">
+              <button type="button" class="secondary" id="show-password">Show</button>
+            </div>
+          </div>
+
+          <div class="form-group">Sensor</div>
+          <div class="field wide">
+            <label for="api_key">API key</label>
+            <input type="text" id="api_key" autocomplete="off" spellcheck="false" data-max-bytes="32">
+          </div>
+          <div class="field">
+            <label for="latitude">Latitude</label>
+            <input type="text" id="latitude" inputmode="decimal" placeholder="-25.2846" data-coordinate="90">
+          </div>
+          <div class="field">
+            <label for="longitude">Longitude</label>
+            <input type="text" id="longitude" inputmode="decimal" placeholder="-57.6359" data-coordinate="180">
+          </div>
+          <div class="location-row">
+            <button type="button" class="secondary" id="locate">Use my location</button>
+          </div>
+          <div class="field">
+            <label for="description">Description</label>
+            <input type="text" id="description" placeholder="Balcony" data-max-bytes="20">
+          </div>
+          <div class="field">
+            <label for="sensor">Sensor model</label>
+            <select id="sensor">
+              <option value="">Keep current</option>
+              <option value="PMS7003">PMS7003</option>
+              <option value="PMS5003">PMS5003</option>
+            </select>
+          </div>
+
+          <details class="advanced">
+            <summary>Advanced</summary>
+            <div class="form">
+              <div class="field wide">
+                <label for="api_url">Measurements API URL</label>
+                <input type="url" id="api_url" spellcheck="false" placeholder="https://api.airelib.re/api/v1/measurements" data-max-bytes="70">
+                <span class="hint">Leave empty to keep the current one.</span>
+              </div>
+              <div class="field wide">
+                <span class="hint">Firmware updates come from the <strong id="ota-track">production</strong>
+                  track chosen in step 1 (<span id="ota-url"></span>).</span>
+              </div>
+            </div>
+          </details>
+        </div>
+        <button type="submit" class="primary" id="send">Send settings to the sensor</button>
+        <p class="form-error" id="form-error" role="alert"></p>
+      </form>
+      <ul class="progress" id="progress" aria-live="polite"></ul>
+      <details class="log" id="log" hidden>
+        <summary>Sensor log</summary>
+        <pre id="log-text"></pre>
+      </details>
+    </section>
+
+    <section class="card">
       <h2>How it works</h2>
       <ol>
         <li>Plug the sensor into this computer with a USB <em>data</em> cable (some cables only charge).</li>
         <li>Click <strong>Connect &amp; install</strong>, pick the sensor's serial port and confirm.
             Erasing the device gives a clean install, but also clears its Wi-Fi and settings.</li>
-        <li>When it finishes, the sensor restarts and opens its own Wi-Fi network. Connect to it
-            to set your Wi-Fi, the sensor's location and its API key.</li>
+        <li>Fill in step 3 and send the settings: the sensor connects to your Wi-Fi and starts
+            measuring. Without them, the sensor opens its own Wi-Fi network
+            (<code>linka-…</code>): connect to it to enter the same settings.</li>
         <li>From then on the sensor checks for updates once a day and installs them by itself.</li>
       </ol>
       <p class="muted" style="margin:16px 0 0">
@@ -326,6 +527,13 @@
         ? `Connect & install ${versions[track]}`
         : "Connect & install";
       develNote.hidden = track !== "devel";
+      document.getElementById("ota-track").textContent = track;
+      document.getElementById("ota-url").textContent = otaUrl(track);
+    }
+
+    // OTA URL of a track on this server, sent to the sensor with its settings
+    function otaUrl(track) {
+      return new URL(track === "production" ? "ota" : `ota/${track}`, location.href).href;
     }
 
     document.querySelectorAll("input[name=track]").forEach((input) =>
@@ -353,6 +561,306 @@
       } catch {
         getSelection().selectAllChildren(document.getElementById("devel-url"));
       }
+    });
+
+    /* ------------------------------------------------------------------
+       Step 3: send settings over USB serial (protocol: serial_config.h in
+       linka-firmware). The sensor prints LINKA_READY at boot and listens for
+       a LINKA_CONFIG line for a couple of seconds.
+       ------------------------------------------------------------------ */
+    const SENSOR_FIELDS = ["wifi_ssid", "wifi_password", "api_key", "latitude", "longitude",
+                           "description", "sensor", "api_url"];
+    const form = document.getElementById("settings");
+    const sendButton = document.getElementById("send");
+    const formError = document.getElementById("form-error");
+    const progress = document.getElementById("progress");
+    const log = document.getElementById("log");
+    const logText = document.getElementById("log-text");
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    // Reads the serial port line by line, so we can wait for the sensor's answers
+    class SerialLines {
+      constructor(port) {
+        this.port = port;
+        this.lines = [];
+        this.waiters = [];
+        this.closed = false;
+      }
+
+      start() {
+        this.reader = this.port.readable.getReader();
+        this.done = (async () => {
+          const decoder = new TextDecoder();
+          let buffer = "";
+          try {
+            for (;;) {
+              const { value, done } = await this.reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              let end;
+              while ((end = buffer.indexOf("\n")) >= 0) {
+                const line = buffer.slice(0, end).replace(/\r$/, "");
+                buffer = buffer.slice(end + 1);
+                this.lines.push(line);
+                showLog(line);
+              }
+              this.wake();
+            }
+          } catch (error) {
+            // Port closed or device unplugged
+          } finally {
+            this.closed = true;
+            this.reader.releaseLock();
+            this.wake();
+          }
+        })();
+      }
+
+      wake() {
+        const waiters = this.waiters;
+        this.waiters = [];
+        waiters.forEach((resolve) => resolve());
+      }
+
+      clear() {
+        this.lines = [];
+      }
+
+      // Resolves with { marker, value } for the first line containing one of `markers`,
+      // or null after `timeout` ms
+      async waitFor(markers, timeout) {
+        const deadline = Date.now() + timeout;
+        for (;;) {
+          while (this.lines.length) {
+            const line = this.lines.shift();
+            for (const marker of markers) {
+              const at = line.indexOf(marker);
+              if (at >= 0) return { marker, value: line.slice(at + marker.length).trim() };
+            }
+          }
+          if (this.closed) throw new Error("The sensor was disconnected.");
+          const left = deadline - Date.now();
+          if (left <= 0) return null;
+          await new Promise((resolve) => {
+            const timer = setTimeout(resolve, left);
+            this.waiters.push(() => { clearTimeout(timer); resolve(); });
+          });
+        }
+      }
+
+      async write(text) {
+        const writer = this.port.writable.getWriter();
+        try {
+          await writer.write(new TextEncoder().encode(text));
+        } finally {
+          writer.releaseLock();
+        }
+      }
+
+      async close() {
+        try { await this.reader.cancel(); } catch {}
+        await this.done;
+        try { await this.port.close(); } catch {}
+      }
+    }
+
+    function showLog(line) {
+      log.hidden = false;
+      logText.textContent += line + "\n";
+      logText.scrollTop = logText.scrollHeight;
+    }
+
+    // Progress list: step(text) adds a running step and returns functions to finish it
+    function step(text) {
+      const item = document.createElement("li");
+      item.className = "running";
+      item.textContent = text;
+      progress.append(item);
+      const finish = (state) => (message) => {
+        item.className = state;
+        if (message) item.textContent = message;
+        return item;
+      };
+      return {
+        done: finish("done"),
+        failed: finish("failed"),
+        update: (message) => { item.textContent = message; },
+      };
+    }
+
+    const byteLength = (text) => new TextEncoder().encode(text).length;
+
+    // Reads and validates the form. Returns the settings to send, or null.
+    function readSettings() {
+      let firstInvalid = null;
+      const settings = {};
+      const invalid = (input, message) => {
+        input.setAttribute("aria-invalid", "true");
+        if (!firstInvalid) firstInvalid = { input, message };
+      };
+      for (const name of SENSOR_FIELDS) {
+        const input = document.getElementById(name);
+        input.removeAttribute("aria-invalid");
+        // Passwords may legitimately start or end with spaces
+        const value = name === "wifi_password" ? input.value : input.value.trim();
+        if (value === "") continue;
+        const maxBytes = Number(input.dataset.maxBytes || 0);
+        if (maxBytes && byteLength(value) > maxBytes) {
+          invalid(input, `${input.labels[0].textContent} is too long (at most ${maxBytes} characters).`);
+          continue;
+        }
+        if (input.dataset.coordinate) {
+          const limit = Number(input.dataset.coordinate);
+          const number = Number(value.replace(",", "."));
+          if (!/^[+-]?\d{1,3}([.,]\d+)?$/.test(value) || Math.abs(number) > limit) {
+            invalid(input, `${input.labels[0].textContent} must be a number between -${limit} and ${limit}.`);
+            continue;
+          }
+          // At most 6 decimals (cut as text: float maths would turn 57.6359 into 57.635899)
+          settings[name] = value.replace(",", ".").replace(/^([+-]?\d+)(\.\d{0,6})?\d*$/, "$1$2");
+          continue;
+        }
+        settings[name] = value;
+      }
+      if (settings.wifi_password !== undefined && settings.wifi_ssid === undefined) {
+        invalid(document.getElementById("wifi_ssid"), "Enter the Wi-Fi network name for this password.");
+      }
+      if (firstInvalid) {
+        formError.textContent = firstInvalid.message;
+        firstInvalid.input.focus();
+        return null;
+      }
+      settings.ota_server = otaUrl(selectedTrack());
+      return settings;
+    }
+
+    async function sendSettings(settings) {
+      progress.replaceChildren();
+      logText.textContent = "";
+      log.hidden = true;
+
+      let port;
+      try {
+        port = await navigator.serial.requestPort();
+      } catch {
+        return;  // No port chosen
+      }
+
+      const connecting = step("Connecting to the sensor…");
+      try {
+        await port.open({ baudRate: 115200, bufferSize: 4096 });
+      } catch (error) {
+        connecting.failed(error.name === "InvalidStateError"
+          ? "The port is in use. Close the installer window (or any serial monitor) and try again."
+          : `Couldn't open the port: ${error.message}`);
+        return;
+      }
+
+      const serial = new SerialLines(port);
+      serial.start();
+      try {
+        // Restart the sensor (RTS = reset on most boards), so it listens for settings
+        await port.setSignals({ dataTerminalReady: false, requestToSend: true });
+        await sleep(100);
+        serial.clear();
+        await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+
+        let ready = await serial.waitFor(["LINKA_READY"], 5000);
+        if (!ready) {
+          connecting.update("Waiting for the sensor… press its RST (reset) button if nothing happens.");
+          ready = await serial.waitFor(["LINKA_READY"], 25000);
+        }
+        if (!ready) {
+          connecting.failed("The sensor didn't answer. Its firmware may be too old for setup " +
+            "over USB: install the latest version in step 2 and try again, or set it up from " +
+            "its own Wi-Fi network.");
+          return;
+        }
+        let info = {};
+        try { info = JSON.parse(ready.value); } catch {}
+        connecting.done(`Found ${info.device || "the sensor"}${info.version ? `, firmware ${info.version}` : ""}`);
+
+        const sending = step("Saving the settings…");
+        await serial.write(`LINKA_CONFIG ${JSON.stringify(settings)}\n`);
+        const answer = await serial.waitFor(["LINKA_CONFIG_OK", "LINKA_CONFIG_ERROR"], 5000);
+        if (!answer) {
+          sending.failed("The sensor didn't confirm the settings. Try again.");
+          return;
+        }
+        if (answer.marker === "LINKA_CONFIG_ERROR") {
+          sending.failed(`The sensor rejected the settings: ${answer.value}`);
+          return;
+        }
+        sending.done("Settings saved");
+
+        if (settings.wifi_ssid === undefined) {
+          step("").done("Done. The sensor keeps its current Wi-Fi network.").classList.add("final");
+          return;
+        }
+        const wifi = step(`Connecting to “${settings.wifi_ssid}”…`);
+        const result = await serial.waitFor(["LINKA_WIFI_CONNECTED", "LINKA_WIFI_FAILED"], 90000);
+        if (!result) {
+          wifi.failed("The sensor didn't report its Wi-Fi connection. Check the sensor log below.");
+        } else if (result.marker === "LINKA_WIFI_FAILED") {
+          wifi.failed(`Couldn't connect to “${settings.wifi_ssid}”. Check the network name and ` +
+            `password and send them again. Meanwhile the sensor opens its own Wi-Fi network ` +
+            `(${info.device || "linka-…"}) to be set up from there.`);
+        } else {
+          wifi.done(`Connected to “${settings.wifi_ssid}” (${result.value})`);
+          step("").done("All set! The sensor is measuring. You can unplug it and put it in place.")
+            .classList.add("final");
+        }
+      } catch (error) {
+        step("").failed(error.message);
+      } finally {
+        await serial.close();
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      formError.textContent = "";
+      if (!("serial" in navigator)) {
+        formError.textContent = "This browser can't talk to USB serial devices. Use Google Chrome or Microsoft Edge on a computer.";
+        return;
+      }
+      const settings = readSettings();
+      if (!settings) return;
+      sendButton.disabled = true;
+      try {
+        await sendSettings(settings);
+      } finally {
+        sendButton.disabled = false;
+      }
+    });
+
+    form.addEventListener("input", (event) => {
+      event.target.removeAttribute("aria-invalid");
+      formError.textContent = "";
+    });
+
+    document.getElementById("show-password").addEventListener("click", (event) => {
+      const password = document.getElementById("wifi_password");
+      const show = password.type === "password";
+      password.type = show ? "text" : "password";
+      event.target.textContent = show ? "Hide" : "Show";
+    });
+
+    document.getElementById("locate").addEventListener("click", (event) => {
+      const button = event.target;
+      if (!navigator.geolocation) {
+        formError.textContent = "This browser can't share its location.";
+        return;
+      }
+      button.textContent = "Locating…";
+      navigator.geolocation.getCurrentPosition((position) => {
+        document.getElementById("latitude").value = position.coords.latitude.toFixed(6);
+        document.getElementById("longitude").value = position.coords.longitude.toFixed(6);
+        button.textContent = "Use my location";
+      }, (error) => {
+        formError.textContent = `Couldn't get your location: ${error.message}`;
+        button.textContent = "Use my location";
+      }, { enableHighAccuracy: true, timeout: 15000 });
     });
 
     update();
